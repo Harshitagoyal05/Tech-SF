@@ -1,0 +1,30 @@
+<!DOCTYPE html> 
+<html>
+    <head>
+        <title>ChatTutor</title>
+    </head>
+    <body>
+        <h1>ChatTutor</h1>
+        <input id="Question" placeholder="Type Your Question ..." />
+        <button onclick="send()">Send</button>
+        <div id="Chat"></div>
+        <script>
+            async function send() {
+                let question = 
+                document.getElementById("Question").value;
+                let response = await fetch("/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ question })
+                });
+                let data = await response.json();
+                document.getElementById("Chat").innerHTML += "<p><b>You:</b>" +question + "</p>" + 
+                "<p><b>ChatTutor:</b>" + data.answer + "</p>";
+                
+            }
+            </script>
+    </body>
+    
+</html>
