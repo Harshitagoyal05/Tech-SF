@@ -254,6 +254,7 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
   border:1px solid var(--border);
   border-top-left-radius:4px;
   color:var(--text-primary);
+  position:relative;
 }
 .user-bubble{
   background:var(--blue-dim);
@@ -329,6 +330,28 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
 }
 .icon-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
 
+.audio-btn{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:30px;
+  height:30px;
+  border:none;
+  border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  color:var(--text-muted);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  transition:all 0.15s;
+}
+.audio-btn:hover{
+  background:rgba(255,255,255,0.12);
+  color:var(--text-primary);
+}
+
 #send-btn{
   width:40px;height:40px;border-radius:50%;border:none;
   background:linear-gradient(135deg,#8ab4f8,#c58af9);
@@ -375,7 +398,7 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
       <div class="logo-gem">🎓</div>
       <div>
         <div class="logo-text">ChatTutor</div>
-        <div class="logo-sub">Powered by Groq · Free</div>
+        <div class="logo-sub">Made by Tech-SF</div>
       </div>
     </div>
   </div>
@@ -462,13 +485,15 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
       <div class="qchip" onclick="fillQ('Give me a practice problem on this')">Practice problem</div>
       <div class="qchip" onclick="fillQ('What should I study next after this topic?')">What to study next</div>
       <div class="qchip" onclick="fillQ('Summarize this topic in 5 bullet points')">Summarize</div>
+      <div class="qchip" onclick="uploadDocument()">Upload doc/image</div>
     </div>
 
     <div class="input-box">
       <textarea id="q-input" placeholder="Ask ChatTutor anything…" rows="1"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <div class="input-actions">
-        <button class="icon-btn" id="document-btn" title="Upload a document" onclick="uploadDocument()">📄</button>
+        <button class="icon-btn" id="document-btn" title="Upload a document or image" onclick="uploadDocument()">📄</button>
+        <button class="icon-btn" id="photo-btn" title="Upload a photo" onclick="uploadDocument()">📷</button>
         <button class="icon-btn" id="voice-btn" title="Voice input" onclick="toggleVoice()">🎤</button>
         <button class="icon-btn" title="Clear" onclick="newChat()">⟳</button>
         <button id="send-btn" onclick="send()" title="Send">
@@ -476,7 +501,7 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
         </button>
       </div>
     </div>
-    <div class="input-hint">Enter to send · Shift+Enter for new line · Tap the microphone for voice input · Tap the paper icon to upload a document · ChatTutor may make mistakes — verify important answers</div>
+    <div class="input-hint">Enter to send · Shift+Enter for new line · Tap the microphone for voice input · Tap the paper or camera icon to upload a file or photo · ChatTutor may make mistakes — verify important answers</div>
   </div>
 
 </main>
@@ -551,11 +576,34 @@ function addMsg(role, content, msgMode) {
   bub.className = 'bubble ' + (role === 'user' ? 'user-bubble' : 'ai-bubble');
   if (role === 'user') bub.textContent = content;
   else bub.innerHTML = formatText(content);
+
+  if (role === 'assistant') {
+    const readBtn = document.createElement('button');
+    readBtn.className = 'audio-btn';
+    readBtn.type = 'button';
+    readBtn.title = 'Read aloud';
+    readBtn.textContent = '🔊';
+    readBtn.onclick = () => speakText(content);
+    bub.appendChild(readBtn);
+  }
   wrap.appendChild(bub);
 
   row.appendChild(av); row.appendChild(wrap);
   area.appendChild(row);
   area.scrollTop = area.scrollHeight;
+}
+
+function speakText(text) {
+  if (!('speechSynthesis' in window)) {
+    addMsg('assistant', '⚠ Speech synthesis is not supported by this browser. Use Chrome or Edge for read aloud.');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.lang = 'en-US';
+  window.speechSynthesis.speak(utterance);
 }
 
 function showTyping() {
@@ -681,7 +729,7 @@ function stopVoice() {
 async function uploadDocument() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.txt,.md,.pdf,.docx';
+  input.accept = '.txt,.md,.pdf,.docx,.png,.jpg,.jpeg,.bmp,.gif';
   input.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;

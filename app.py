@@ -14,6 +14,9 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chattutor-groq-secret-2024")
+OCR_ENGINE = os.environ.get("OCR_ENGINE", "easyocr").strip().lower()
+TESSERACT_CMD = os.environ.get("TESSERACT_CMD")
+EASY_OCR_READER = None
 CORS(app)
 
 login_manager = LoginManager()
@@ -273,11 +276,52 @@ def document_reader():
                 return jsonify({"error": "DOCX support requires python-docx. Install it with `pip install python-docx`."}), 500
             doc = Document(io.BytesIO(data))
             text = '\n\n'.join(p.text for p in doc.paragraphs).strip()
+        elif ext in ['.png', '.jpg', '.jpeg', '.bmp', '.gif'] or file.content_type.startswith('image/'):
+            try:
+                from PIL import Image
+            except ImportError:
+                return jsonify({"error": "Image OCR support requires Pillow. Install it with `pip install Pillow pytesseract easyocr`."}), 500
+
+            image = Image.open(io.BytesIO(data))
+            if OCR_ENGINE == 'pytesseract':
+                try:
+                    import pytesseract
+                    if TESSERACT_CMD:
+                        pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+                except ImportError:
+                    return jsonify({"error": "Image OCR support requires pytesseract. Install it with `pip install pytesseract` and make sure Tesseract OCR is installed on your system."}), 500
+                try:
+                    text = pytesseract.image_to_string(image).strip()
+                except (pytesseract.pytesseract.TesseractNotFoundError, OSError) as e:
+                    cmd_info = " Set TESSERACT_CMD to the full path to tesseract.exe or verify your PATH."
+                    return jsonify({"error": f"Tesseract executable not found.{cmd_info} Details: {str(e)}"}), 500
+            else:
+                try:
+                    import easyocr
+                    import numpy as np
+                except ImportError:
+                    try:
+                        import pytesseract
+                        if TESSERACT_CMD:
+                            pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+                    except ImportError:
+                        return jsonify({"error": "Image OCR support requires easyocr or pytesseract. Install `pip install easyocr` or `pip install pytesseract` and make sure Tesseract is installed on your system."}), 500
+                    try:
+                        text = pytesseract.image_to_string(image).strip()
+                    except (pytesseract.pytesseract.TesseractNotFoundError, OSError) as e:
+                        cmd_info = " Set TESSERACT_CMD to the full path to tesseract.exe or verify your PATH."
+                        return jsonify({"error": f"Tesseract executable not found.{cmd_info} Details: {str(e)}"}), 500
+                else:
+                    global EASY_OCR_READER
+                    if EASY_OCR_READER is None:
+                        EASY_OCR_READER = easyocr.Reader(['en'], gpu=False)
+                    text_list = EASY_OCR_READER.readtext(np.array(image), detail=0)
+                    text = '\n'.join(text_list).strip()
         else:
-            return jsonify({"error": "Unsupported document type. Upload .txt, .md, .pdf, or .docx."}), 400
+            return jsonify({"error": "Unsupported document type. Upload .txt, .md, .pdf, .docx, or an image file."}), 400
 
         if not text:
-            return jsonify({"error": "No text found in document"}), 400
+            return jsonify({"error": "No text found in the uploaded file. For image OCR, make sure the text is legible."}), 400
 
         return jsonify({"text": text})
     except Exception as e:
