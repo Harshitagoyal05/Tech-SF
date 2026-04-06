@@ -19,3 +19,17 @@ class Message(db.Model):
     content         = db.Column(db.Text, nullable=False)
     mode            = db.Column(db.String(16), default="normal")
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+class InterviewSession(db.Model):
+    __tablename__ = "interview_sessions"
+    id               = db.Column(db.Integer, primary_key=True)
+    user_id          = db.Column(db.String(64), nullable=False, index=True)
+    name             = db.Column(db.String(100), nullable=False)
+    role             = db.Column(db.String(100), nullable=False)
+    skills           = db.Column(db.Text, default="")
+    interviewer_mode = db.Column(db.String(20), default="friendly")   # friendly | strict
+    system_prompt    = db.Column(db.Text, nullable=False)
+    transcript       = db.Column(db.Text, default="[]")               # JSON array
+    question_count   = db.Column(db.Integer, default=0)
+    completed        = db.Column(db.Boolean, default=False)
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
