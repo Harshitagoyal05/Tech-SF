@@ -177,16 +177,20 @@
     </div>
 
     <div class="card-body">
-      <div id="form-message" class="message"></div>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="message error">{{ messages[0] }}</div>
+        {% endif %}
+      {% endwith %}
 
-      <form id="login-form">
+      <form id="login-form" method="POST" action="{{ url_for('login') }}">
         <div class="input-row">
-          <label for="login-email">Gmail address</label>
-          <input id="login-email" type="email" placeholder="you@gmail.com" required>
+          <label for="email">Gmail address</label>
+          <input id="email" name="email" type="email" placeholder="you@gmail.com" required>
         </div>
         <div class="input-row">
-          <label for="login-password">Password</label>
-          <input id="login-password" type="password" placeholder="Enter your password" required>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Enter your password" required>
         </div>
         <div class="submit-row">
           <button type="submit" class="submit-btn">Sign in</button>
@@ -194,18 +198,18 @@
         </div>
       </form>
 
-      <form id="signup-form" class="hidden">
+      <form id="signup-form" class="hidden" method="POST" action="{{ url_for('signup') }}">
         <div class="input-row">
-          <label for="signup-username">Username</label>
-          <input id="signup-username" type="text" placeholder="Pick a display name" required>
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" placeholder="Pick a display name" required>
         </div>
         <div class="input-row">
-          <label for="signup-email">Gmail address</label>
-          <input id="signup-email" type="email" placeholder="you@gmail.com" required>
+          <label for="email">Gmail address</label>
+          <input id="email" name="email" type="email" placeholder="you@gmail.com" required>
         </div>
         <div class="input-row">
-          <label for="signup-password">Password</label>
-          <input id="signup-password" type="password" placeholder="Choose a secure password" required>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Choose a secure password" required>
         </div>
         <div class="submit-row">
           <button type="submit" class="submit-btn">Create account</button>
@@ -221,7 +225,6 @@
     const tabs = document.querySelectorAll('.tab-button');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
-    const message = document.getElementById('form-message');
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -229,52 +232,8 @@
         const showSignup = tab.dataset.tab === 'signup';
         signupForm.classList.toggle('hidden', !showSignup);
         loginForm.classList.toggle('hidden', showSignup);
-        message.textContent = '';
-        message.className = 'message';
       });
     });
-
-    loginForm.addEventListener('submit', async event => {
-      event.preventDefault();
-      setMessage('Signing in...', '');
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        window.location.href = '/';
-      } else {
-        setMessage(data.error || 'Login failed. Please try again.', 'error');
-      }
-    });
-
-    signupForm.addEventListener('submit', async event => {
-      event.preventDefault();
-      setMessage('Creating account...', '');
-      const username = document.getElementById('signup-username').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value;
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        window.location.href = '/';
-      } else {
-        setMessage(data.error || 'Signup failed. Please try again.', 'error');
-      }
-    });
-
-    function setMessage(text, type) {
-      message.textContent = text;
-      message.className = type ? `message ${type}` : 'message';
-    }
   </script>
 </body>
 </html>

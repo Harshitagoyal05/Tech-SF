@@ -1,12 +1,14 @@
-from flask import Flask, request, jsonify, render_template, session, send_from_directory
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from flask_cors import CORS
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from groq import Groq
-from werkzeug.utils import secure_filename
 import os
 import uuid
 from datetime import datetime
-from database1 import db, Conversation, Message
+from database1 import db, User, Conversation, Message
 from dotenv import load_dotenv
+import io
 
 load_dotenv()
 
@@ -14,9 +16,9 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chattutor-groq-secret-2024")
 CORS(app)
 
-UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
-ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///chattutor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -57,25 +59,75 @@ def detect_weak_topics(text):
     return [kw for kw in WEAK_KEYWORDS if kw in lower][:3]
 
 
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 # ── Routes ─────────────────────────────────────
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        user = User.query.filter_by(email=email).first()
+        if user and password and check_password_hash(user.password_hash, password):
+            login_user(user)
+            return redirect(url_for('index'))
+        flash('Invalid email or password')
+    return render_template('login.html')
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        if not username or not email or not password:
+            flash('All fields are required')
+            return redirect(url_for('signup'))
+        if User.query.filter_by(email=email).first():
+            flash('Email already exists')
+            return redirect(url_for('signup'))
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists')
+            return redirect(url_for('signup'))
+        user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password, method='pbkdf2:sha256')
+        )
+        db.session.add(user)
+        db.session.commit()
+        login_user(user)
+        return redirect(url_for('index'))
+    return render_template('login.html')
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route("/")
+@login_required
 def index():
-    session.setdefault("user_id", str(uuid.uuid4()))
     return render_template("index.html")
 
 
 @app.route("/api/ask", methods=["POST"])
+@login_required
 def ask():
     data = request.get_json()
     question = data.get("question", "").strip()
     mode = data.get("mode", "normal")
     conversation_id = data.get("conversation_id")
-    user_id = session.get("user_id", "anon")
+    user_id = current_user.id
 
     if not question:
         return jsonify({"error": "Question is required"}), 400
@@ -134,41 +186,19 @@ def ask():
 
 
 @app.route("/api/history")
+@login_required
 def history():
-    user_id = session.get("user_id", "anon")
+    user_id = current_user.id
     convos = Conversation.query.filter_by(user_id=user_id)\
         .order_by(Conversation.created_at.desc()).limit(15).all()
     return jsonify([{"id": c.id, "title": c.title,
                      "created_at": c.created_at.isoformat()} for c in convos])
 
 
-@app.route("/api/upload-photo", methods=["POST"])
-def upload_photo():
-    if "photo" not in request.files:
-        return jsonify({"error": "No photo uploaded"}), 400
-
-    photo = request.files["photo"]
-    if photo.filename == "":
-        return jsonify({"error": "Please choose a photo file"}), 400
-
-    if not allowed_file(photo.filename):
-        return jsonify({"error": "Only JPG, PNG, and GIF files are allowed"}), 400
-
-    filename = f"{uuid.uuid4().hex}_{secure_filename(photo.filename)}"
-    path = os.path.join(UPLOAD_FOLDER, filename)
-    photo.save(path)
-
-    return jsonify({"message": "Photo uploaded successfully", "filename": filename})
-
-
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
-
 @app.route("/api/conversation/<int:cid>")
+@login_required
 def get_conversation(cid):
-    user_id = session.get("user_id", "anon")
+    user_id = current_user.id
     convo = Conversation.query.filter_by(id=cid, user_id=user_id).first()
     if not convo:
         return jsonify({"error": "Not found"}), 404
@@ -182,8 +212,9 @@ def get_conversation(cid):
 
 
 @app.route("/api/weak-topics")
+@login_required
 def weak_topics():
-    user_id = session.get("user_id", "anon")
+    user_id = current_user.id
     convos = Conversation.query.filter_by(user_id=user_id).all()
     ids = [c.id for c in convos]
     if not ids:
@@ -203,12 +234,57 @@ def weak_topics():
 
 
 @app.route("/api/clear", methods=["POST"])
+@login_required
 def clear():
-    session["user_id"] = str(uuid.uuid4())
+    # Optionally clear all conversations for the user
+    Conversation.query.filter_by(user_id=current_user.id).delete()
+    db.session.commit()
     return jsonify({"status": "ok"})
+
+
+@app.route("/api/document", methods=["POST"])
+@login_required
+def document_reader():
+    if 'document' not in request.files:
+        return jsonify({"error": "No document file provided"}), 400
+    
+    file = request.files['document']
+    if file.filename == '':
+        return jsonify({"error": "No document selected"}), 400
+
+    filename = file.filename.lower()
+    ext = os.path.splitext(filename)[1]
+    data = file.read()
+
+    try:
+        if ext in ['.txt', '.md'] or file.content_type.startswith('text/'):
+            text = data.decode('utf-8', errors='replace').strip()
+        elif ext == '.pdf':
+            try:
+                import fitz
+            except ImportError:
+                return jsonify({"error": "PDF support requires PyMuPDF. Install it with `pip install PyMuPDF`."}), 500
+            doc = fitz.open(stream=data, filetype='pdf')
+            text = '\n\n'.join(page.get_text() for page in doc).strip()
+        elif ext == '.docx':
+            try:
+                from docx import Document
+            except ImportError:
+                return jsonify({"error": "DOCX support requires python-docx. Install it with `pip install python-docx`."}), 500
+            doc = Document(io.BytesIO(data))
+            text = '\n\n'.join(p.text for p in doc.paragraphs).strip()
+        else:
+            return jsonify({"error": "Unsupported document type. Upload .txt, .md, .pdf, or .docx."}), 400
+
+        if not text:
+            return jsonify({"error": "No text found in document"}), 400
+
+        return jsonify({"text": text})
+    except Exception as e:
+        return jsonify({"error": f"Document processing failed: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, use_reloader=False, port=5000)
