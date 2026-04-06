@@ -174,6 +174,15 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
   color:var(--blue);font-weight:500;
 }
 
+.topbar-right{margin-left:auto}
+.logout-btn{
+  font-size:12px;color:var(--text-secondary);
+  text-decoration:none;padding:6px 12px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;
+  transition:all 0.2s;
+}
+.logout-btn:hover{color:var(--red);border-color:var(--red-dim);background:var(--red-dim)}
+
 /* ── Welcome screen ────────────────────────── */
 .chat-area{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:18px}
 
@@ -408,6 +417,9 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
       <div class="mode-pill" id="pill-eli5" onclick="setMode('eli5')">✨ ELI5</div>
       <div class="mode-pill" id="pill-exam" onclick="setMode('exam')">📝 Exam Mode</div>
     </div>
+    <div class="topbar-right">
+      <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
   </div>
 
   <!-- Memory bar -->
@@ -456,15 +468,14 @@ html,body{height:100%;font-family:'Google Sans','Roboto',sans-serif;background:v
       <textarea id="q-input" placeholder="Ask ChatTutor anything…" rows="1"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <div class="input-actions">
-        <button class="icon-btn" title="Upload photo" onclick="document.getElementById('photo-input').click()">📷</button>
-        <input id="photo-input" type="file" accept="image/*" style="display:none" onchange="uploadPhoto()">
+        <button class="icon-btn" id="voice-btn" title="Voice input" onclick="toggleVoice()">🎤</button>
         <button class="icon-btn" title="Clear" onclick="newChat()">⟳</button>
         <button id="send-btn" onclick="send()" title="Send">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
         </button>
       </div>
     </div>
-    <div class="input-hint">Enter to send · Shift+Enter for new line · Tap the camera to upload an image · ChatTutor may make mistakes — verify important answers</div>
+    <div class="input-hint">Enter to send · Shift+Enter for new line · Tap the microphone for voice input · ChatTutor may make mistakes — verify important answers</div>
   </div>
 
 </main>
@@ -607,46 +618,63 @@ async function send() {
   document.getElementById('send-btn').disabled = false;
 }
 
-async function uploadPhoto() {
-  const fileInput = document.getElementById('photo-input');
-  const file = fileInput.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) {
-    addMsg('assistant', '⚠ Only image files are supported.');
-    fileInput.value = '';
+let recognition = null;
+let isListening = false;
+
+function toggleVoice() {
+  const btn = document.getElementById('voice-btn');
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    addMsg('assistant', '⚠ Voice input is not supported in this browser. Try Chrome or Edge.');
     return;
   }
 
-  if (busy) return;
-  busy = true;
-  showTyping();
-
-  const formData = new FormData();
-  formData.append('photo', file);
-
-  try {
-    const res = await fetch('/api/upload-photo', {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await res.json();
-    removeTyping();
-
-    if (data.error) {
-      addMsg('assistant', '⚠ ' + data.error);
-      document.getElementById('status-sub').textContent = 'Upload error';
-    } else {
-      addMsg('assistant', 'Photo uploaded successfully: ' + data.filename);
-      document.getElementById('status-sub').textContent = 'Photo uploaded';
-    }
-  } catch (err) {
-    removeTyping();
-    addMsg('assistant', '⚠ Upload failed.');
-    document.getElementById('status-sub').textContent = 'Upload error';
+  if (isListening) {
+    stopVoice();
+  } else {
+    startVoice();
   }
+}
 
-  busy = false;
-  fileInput.value = '';
+function startVoice() {
+  const btn = document.getElementById('voice-btn');
+  btn.textContent = '⏹️';
+  btn.title = 'Stop voice input';
+  isListening = true;
+
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    const input = document.getElementById('q-input');
+    input.value += (input.value ? ' ' : '') + transcript;
+    autoResize(input);
+    input.focus();
+  };
+
+  recognition.onerror = function(event) {
+    addMsg('assistant', '⚠ Voice recognition error: ' + event.error);
+  };
+
+  recognition.onend = function() {
+    stopVoice();
+  };
+
+  recognition.start();
+}
+
+function stopVoice() {
+  const btn = document.getElementById('voice-btn');
+  btn.textContent = '🎤';
+  btn.title = 'Voice input';
+  isListening = false;
+
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+  }
 }
 
 function showMemBar(topics) {
