@@ -4,7 +4,7 @@ from groq import Groq
 import os
 import uuid
 from datetime import datetime
-from database1 import db, Conversation, Message
+from database import db, Conversation, Message
 from dotenv import load_dotenv
 
 load_dotenv()
