@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatTutor — Route Map</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, sans-serif;
+      background: #f9f9f7;
+      color: #1a1a18;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0 0 16px;
+      color: #1a1a18;
+    }
+    svg text { font-family: system-ui, sans-serif; }
+    .th { font-size: 14px; font-weight: 500; fill: #1a1a18; }
+    .ts { font-size: 12px; font-weight: 400; fill: #5f5e5a; }
+    .node { cursor: pointer; }
+    .node:hover rect { opacity: 0.85; }
+
+    /* Color ramps */
+    .c-purple rect { fill: #EEEDFE; stroke: #534AB7; }
+    .c-purple .th { fill: #3C3489; }
+    .c-purple .ts { fill: #534AB7; }
+
+    .c-teal rect { fill: #E1F5EE; stroke: #0F6E56; }
+    .c-teal .th { fill: #085041; }
+    .c-teal .ts { fill: #0F6E56; }
+
+    .c-coral rect { fill: #FAECE7; stroke: #993C1D; }
+    .c-coral .th { fill: #712B13; }
+    .c-coral .ts { fill: #993C1D; }
+
+    .c-blue rect { fill: #E6F1FB; stroke: #185FA5; }
+    .c-blue .th { fill: #0C447C; }
+    .c-blue .ts { fill: #185FA5; }
+
+    .c-amber rect { fill: #FAEEDA; stroke: #854F0B; }
+    .c-amber .th { fill: #633806; }
+    .c-amber .ts { fill: #854F0B; }
+
+    .c-green rect { fill: #EAF3DE; stroke: #3B6D11; }
+    .c-green .th { fill: #27500A; }
+    .c-green .ts { fill: #3B6D11; }
+
+    .c-gray rect { fill: #F1EFE8; stroke: #5F5E5A; }
+    .c-gray .th { fill: #444441; }
+    .c-gray .ts { fill: #5F5E5A; }
+
+    .arr { stroke: #888780; stroke-width: 1.5; fill: none; }
+    .legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  </style>
+</head>
+<body>
+  <h1>ChatTutor — Route Map</h1>
+  <svg width="100%" viewBox="0 0 680 820" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <!-- Auth group -->
+    <text class="ts" x="44" y="62" font-size="11">Auth</text>
+    <rect x="40" y="68" width="600" height="110" rx="10" fill="none" stroke="#b4b2a9" stroke-width="0.8" stroke-dasharray="4 3"/>
+
+    <g class="node c-purple">
+      <rect x="60" y="82" width="160" height="52" rx="8" stroke-width="0.5"/>
+      <text class="th" x="140" y="103" text-anchor="middle" dominant-baseline="central">GET /login</text>
+      <text class="ts" x="140" y="121" text-anchor="middle" dominant-baseline="central">POST /login</text>
+    </g>
+
+    <g class="node c-purple">
+      <rect x="250" y="82" width="160" height="52" rx="8" stroke-width="0.5"/>
+      <text class="th" x="330" y="103" text-anchor="middle" dominant-baseline="central">GET /signup</text>
+      <text class="ts" x="330" y="121" text-anchor="middle" dominant-baseline="central">POST /signup</text>
+    </g>
+
+    <g class="node c-coral">
+      <rect x="440" y="82" width="160" height="52" rx="8" stroke-width="0.5"/>
+      <text class="th" x="520" y="103" text-anchor="middle" dominant-baseline="central">GET /logout</text>
+      <text class="ts" x="520" y="121" text-anchor="middle" dominant-baseline="central">login_required</text>
+    </g>
+
+    <!-- Arrow to index -->
+    <line x1="340" y1="178" x2="340" y2="215" class="arr" marker-end="url(#arrow)"/>
+
+    <!-- Index -->
+    <g class="node c-teal">
+      <rect x="240" y="215" width="200" height="44" rx="8" stroke-width="0.5"/>
+      <text class="th" x="340" y="232" text-anchor="middle" dominant-baseline="central">GET /</text>
+      <text class="ts" x="340" y="250" text-anchor="middle" dominant-baseline="central">index.html (login_required)</text>
+    </g>
+
+    <!-- Arrow to API group -->
+    <line x1="340" y1="259" x2="340" y2="295" class="arr" marker-end="url(#arrow)"/>
+
+    <!-- API group -->
+    <text class="ts" x="44" y="308" font-size="11">API endpoints (all login_required)</text>
+    <rect x="40" y="295" width="600" height="420" rx="10" fill="none" stroke="#b4b2a9" stroke-width="0.8" stroke-dasharray="4 3"/>
+
+    <g class="node c-blue">
+      <rect x="60" y="315" width="260" height="66" rx="8" stroke-width="0.5"/>
+      <text class="th" x="190" y="337" text-anchor="middle" dominant-baseline="central">POST /api/ask</text>
+      <text class="ts" x="190" y="355" text-anchor="middle" dominant-baseline="central">Send question → Groq API</text>
+      <text class="ts" x="190" y="371" text-anchor="middle" dominant-baseline="central">modes: normal · eli5 · exam</text>
+    </g>
+
+    <g class="node c-blue">
+      <rect x="360" y="315" width="240" height="66" rx="8" stroke-width="0.5"/>
+      <text class="th" x="480" y="337" text-anchor="middle" dominant-baseline="central">GET /api/history</text>
+      <text class="ts" x="480" y="355" text-anchor="middle" dominant-baseline="central">List last 15 conversations</text>
+      <text class="ts" x="480" y="371" text-anchor="middle" dominant-baseline="central">for current user</text>
+    </g>
+
+    <g class="node c-blue">
+      <rect x="60" y="410" width="260" height="66" rx="8" stroke-width="0.5"/>
+      <text class="th" x="190" y="432" text-anchor="middle" dominant-baseline="central">GET /api/conversation/&lt;id&gt;</text>
+      <text class="ts" x="190" y="450" text-anchor="middle" dominant-baseline="central">Get full message thread</text>
+      <text class="ts" x="190" y="466" text-anchor="middle" dominant-baseline="central">for one conversation</text>
+    </g>
+
+    <g class="node c-amber">
+      <rect x="360" y="410" width="240" height="66" rx="8" stroke-width="0.5"/>
+      <text class="th" x="480" y="432" text-anchor="middle" dominant-baseline="central">GET /api/weak-topics</text>
+      <text class="ts" x="480" y="450" text-anchor="middle" dominant-baseline="central">Analyse user messages</text>
+      <text class="ts" x="480" y="466" text-anchor="middle" dominant-baseline="central">→ weak &amp; strong topics</text>
+    </g>
+
+    <g class="node c-coral">
+      <rect x="60" y="505" width="260" height="66" rx="8" stroke-width="0.5"/>
+      <text class="th" x="190" y="527" text-anchor="middle" dominant-baseline="central">POST /api/clear</text>
+      <text class="ts" x="190" y="545" text-anchor="middle" dominant-baseline="central">Delete all conversations</text>
+      <text class="ts" x="190" y="561" text-anchor="middle" dominant-baseline="central">for current user</text>
+    </g>
+
+    <g class="node c-green">
+      <rect x="360" y="505" width="240" height="66" rx="8" stroke-width="0.5"/>
+      <text class="th" x="480" y="527" text-anchor="middle" dominant-baseline="central">POST /api/document</text>
+      <text class="ts" x="480" y="545" text-anchor="middle" dominant-baseline="central">Upload file → extract text</text>
+      <text class="ts" x="480" y="561" text-anchor="middle" dominant-baseline="central">txt · pdf · docx · image OCR</text>
+    </g>
+
+    <!-- DB Models -->
+    <text class="ts" x="44" y="622" font-size="11">Database models</text>
+    <rect x="40" y="628" width="600" height="80" rx="10" fill="none" stroke="#b4b2a9" stroke-width="0.8" stroke-dasharray="4 3"/>
+
+    <g class="node c-gray">
+      <rect x="60" y="642" width="160" height="44" rx="8" stroke-width="0.5"/>
+      <text class="th" x="140" y="659" text-anchor="middle" dominant-baseline="central">User</text>
+      <text class="ts" x="140" y="677" text-anchor="middle" dominant-baseline="central">id · username · email</text>
+    </g>
+
+    <g class="node c-gray">
+      <rect x="250" y="642" width="160" height="44" rx="8" stroke-width="0.5"/>
+      <text class="th" x="330" y="659" text-anchor="middle" dominant-baseline="central">Conversation</text>
+      <text class="ts" x="330" y="677" text-anchor="middle" dominant-baseline="central">id · user_id · title</text>
+    </g>
+
+    <g class="node c-gray">
+      <rect x="440" y="642" width="160" height="44" rx="8" stroke-width="0.5"/>
+      <text class="th" x="520" y="659" text-anchor="middle" dominant-baseline="central">Message</text>
+      <text class="ts" x="520" y="677" text-anchor="middle" dominant-baseline="central">id · role · content · mode</text>
+    </g>
+
+    <!-- Legend -->
+    <text class="ts" x="44" y="750" font-size="11">Legend</text>
+    <rect x="40" y="757" width="12" height="12" rx="2" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+    <text class="ts" x="58" y="768">Auth</text>
+    <rect x="110" y="757" width="12" height="12" rx="2" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+    <text class="ts" x="128" y="768">Entry</text>
+    <rect x="182" y="757" width="12" height="12" rx="2" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+    <text class="ts" x="200" y="768">Core API</text>
+    <rect x="268" y="757" width="12" height="12" rx="2" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+    <text class="ts" x="286" y="768">Analytics</text>
+    <rect x="354" y="757" width="12" height="12" rx="2" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+    <text class="ts" x="372" y="768">Destructive</text>
+    <rect x="452" y="757" width="12" height="12" rx="2" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+    <text class="ts" x="470" y="768">File upload</text>
+
+    <text class="ts" x="340" y="800" text-anchor="middle" fill="#888780">ChatTutor — Route Map</text>
+  </svg>
+</body>
+</html>
