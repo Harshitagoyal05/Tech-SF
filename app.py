@@ -4,7 +4,7 @@ from groq import Groq
 import os
 import uuid
 from datetime import datetime
-from database import db, Conversation, Message
+from database1 import db, Conversation, Message
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,7 +14,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "chattutor-groq-secret-2024")
 CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///chattutor.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False 
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 # ── Groq client (FREE) ─────────────────────────
@@ -48,20 +48,15 @@ WEAK_KEYWORDS = [
 ]
 
 def detect_weak_topics(text):
-    found = []
     lower = text.lower()
-    for kw in WEAK_KEYWORDS:
-        if kw in lower and kw not in found:
-            found.append(kw)
-    return found[:3]
+    return [kw for kw in WEAK_KEYWORDS if kw in lower][:3]
 
 
 # ── Routes ─────────────────────────────────────
 
 @app.route("/")
 def index():
-    if "user_id" not in session:
-        session["user_id"] = str(uuid.uuid4())
+    session.setdefault("user_id", str(uuid.uuid4()))
     return render_template("index.html")
 
 
