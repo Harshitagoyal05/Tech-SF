@@ -14,7 +14,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "chattutor-groq-secret-2024")
 CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///chattutor.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False 
 db.init_app(app)
 
 # ── Groq client (FREE) ─────────────────────────
